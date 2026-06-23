@@ -58,18 +58,34 @@ const CollapsibleSection = ({ title, children, defaultOpen = true }) => {
 };
 
 // ------------------------------
-// Helper: safely convert array items to string
+// Utility: safely convert any value to a displayable string
+// ------------------------------
+const safeRenderValue = (value) => {
+  if (value === null || value === undefined) return "N/A";
+  if (typeof value === "string" || typeof value === "number") return String(value);
+  // If it's an object, convert to a readable string (compact)
+  try {
+    // For development effort-like objects, show key-value pairs
+    return Object.entries(value)
+      .map(([k, v]) => `${k}: ${v}`)
+      .join(", ");
+  } catch {
+    return String(value);
+  }
+};
+
+// ------------------------------
+// Helper: safely convert array items to string list
 // ------------------------------
 const toStringList = (items) => {
   if (!items) return [];
   return items.map((item) => {
     if (typeof item === "string") return item;
-    // Handle common object shapes: description, risk, name, detail
+    if (typeof item === "number") return String(item);
     if (item.description) return item.description;
     if (item.risk) return item.risk;
     if (item.name) return item.name;
     if (item.detail) return item.detail;
-    // Fallback: try to convert object to readable string (better than crash)
     try {
       return JSON.stringify(item);
     } catch {
@@ -90,7 +106,6 @@ const RFPDetails = () => {
   const [proposalContent, setProposalContent] = useState(null);
   const [toast, setToast] = useState({ show: false, message: "", type: "success" });
 
-  // Toast helpers
   const showToast = useCallback((message, type = "success") => {
     setToast({ show: true, message, type });
   }, []);
@@ -99,7 +114,6 @@ const RFPDetails = () => {
   // Fetch RFP
   useEffect(() => {
     let cancelled = false;
-
     const fetchRFP = async () => {
       try {
         const response = await getRFPById(id);
@@ -113,7 +127,6 @@ const RFPDetails = () => {
         if (!cancelled) setLoading(false);
       }
     };
-
     fetchRFP();
     return () => { cancelled = true; };
   }, [id, showToast]);
@@ -122,8 +135,6 @@ const RFPDetails = () => {
   const handleGenerateProposal = async () => {
     try {
       setGenerating(true);
-
-      // Construct proposal text
       const content = `
 ========================================
 PROJECT OVERVIEW
@@ -191,11 +202,11 @@ ${rfp.riskAnalysis?.mitigationStrategies?.join("\n") || "N/A"}
 COST ESTIMATION
 ========================================
 
-Complexity: ${rfp.costEstimation?.complexity || "N/A"}
-Team Size: ${rfp.costEstimation?.estimatedTeamSize || "N/A"}
-Duration: ${rfp.costEstimation?.estimatedDuration || "N/A"}
-Estimated Cost: ${rfp.costEstimation?.estimatedCost || "N/A"}
-Development Effort: ${rfp.costEstimation?.developmentEffort || "N/A"}
+Complexity: ${safeRenderValue(rfp.costEstimation?.complexity)}
+Team Size: ${safeRenderValue(rfp.costEstimation?.estimatedTeamSize)}
+Duration: ${safeRenderValue(rfp.costEstimation?.estimatedDuration)}
+Estimated Cost: ${safeRenderValue(rfp.costEstimation?.estimatedCost)}
+Development Effort: ${safeRenderValue(rfp.costEstimation?.developmentEffort)}
 
 Recommendations:
 ${rfp.costEstimation?.recommendations?.join("\n") || "N/A"}
@@ -204,10 +215,7 @@ ${rfp.costEstimation?.recommendations?.join("\n") || "N/A"}
 END OF PROPOSAL
 ========================================
 `;
-
-      // Save proposal via API
       await createProposal({ rfpId: rfp._id, proposalContent: content });
-
       setProposalContent(content);
       showToast("Proposal generated successfully!", "success");
     } catch (error) {
@@ -218,7 +226,6 @@ END OF PROPOSAL
     }
   };
 
-  // Download proposal as .txt file
   const downloadProposal = () => {
     if (!proposalContent) return;
     const blob = new Blob([proposalContent], { type: "text/plain" });
@@ -232,7 +239,6 @@ END OF PROPOSAL
     URL.revokeObjectURL(url);
   };
 
-  // Loading state
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[300px]">
@@ -245,7 +251,6 @@ END OF PROPOSAL
     );
   }
 
-  // Not found
   if (!rfp) {
     return (
       <div className="text-center py-16">
@@ -257,7 +262,6 @@ END OF PROPOSAL
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-16">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <h1 className="text-3xl font-bold text-gray-900">{rfp.projectName}</h1>
         <span className="self-start px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
@@ -265,7 +269,6 @@ END OF PROPOSAL
         </span>
       </div>
 
-      {/* Client Info */}
       <CollapsibleSection title="Client Information">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <InfoItem label="Name" value={rfp.clientName} />
@@ -275,18 +278,16 @@ END OF PROPOSAL
         </div>
       </CollapsibleSection>
 
-      {/* Requirements */}
       <CollapsibleSection title="Requirements Analysis">
         <SubSectionList title="Functional Requirements" items={rfp.requirements?.functionalRequirements} />
         <SubSectionList title="Non‑Functional Requirements" items={rfp.requirements?.nonFunctionalRequirements} />
         <SubSectionList title="Technologies" items={rfp.requirements?.technologies} />
         <div>
           <h3 className="font-semibold text-gray-700">Scope</h3>
-          <p className="text-gray-600 mt-1">{rfp.requirements?.scope || "N/A"}</p>
+          <p className="text-gray-600 mt-1">{safeRenderValue(rfp.requirements?.scope)}</p>
         </div>
       </CollapsibleSection>
 
-      {/* Business Analysis */}
       <CollapsibleSection title="Business Analysis">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <InfoItem label="Project Type" value={rfp.businessAnalysis?.projectType} />
@@ -298,7 +299,6 @@ END OF PROPOSAL
         <SubSectionList title="Assumptions" items={toStringList(rfp.businessAnalysis?.assumptions)} />
       </CollapsibleSection>
 
-      {/* Risk Analysis – FIXED */}
       <CollapsibleSection title="Risk Analysis">
         <SubSectionList
           title="Technical Risks"
@@ -322,7 +322,6 @@ END OF PROPOSAL
         />
       </CollapsibleSection>
 
-      {/* Cost Estimation */}
       <CollapsibleSection title="Cost Estimation">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <InfoItem label="Complexity" value={rfp.costEstimation?.complexity} />
@@ -337,7 +336,6 @@ END OF PROPOSAL
         />
       </CollapsibleSection>
 
-      {/* Proposal Generation */}
       <div className="bg-white rounded-xl shadow-sm border p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="text-lg font-semibold text-gray-800">Proposal Document</h2>
@@ -377,7 +375,6 @@ END OF PROPOSAL
         </div>
       </div>
 
-      {/* Toast */}
       {toast.show && (
         <Toast message={toast.message} type={toast.type} onClose={closeToast} />
       )}
@@ -389,7 +386,7 @@ END OF PROPOSAL
 const InfoItem = ({ label, value }) => (
   <div>
     <p className="text-sm font-medium text-gray-500">{label}</p>
-    <p className="text-gray-800">{value || "N/A"}</p>
+    <p className="text-gray-800">{safeRenderValue(value)}</p>
   </div>
 );
 
