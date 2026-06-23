@@ -1,61 +1,92 @@
 import { Link } from "react-router-dom";
+import { FaFileAlt, FaCheckCircle, FaSpinner, FaCloudUploadAlt } from "react-icons/fa";
 
-const statusConfig = {
-  draft: { bg: "bg-gray-100 text-gray-700", label: "Draft" },
-  in_progress: { bg: "bg-yellow-100 text-yellow-800", label: "In Progress" },
-  completed: { bg: "bg-green-100 text-green-800", label: "Completed" },
-  uploaded: { bg: "bg-blue-100 text-blue-800", label: "Uploaded" },
+const STATUS_CONFIG = {
+  uploaded: { label: "Uploaded", classes: "bg-blue-50 text-blue-700 ring-blue-200", icon: FaCloudUploadAlt },
+  draft: { label: "Draft", classes: "bg-slate-100 text-slate-600 ring-slate-200", icon: FaFileAlt },
+  in_progress: { label: "In Progress", classes: "bg-amber-50 text-amber-700 ring-amber-200", icon: FaSpinner },
+  completed: { label: "Completed", classes: "bg-emerald-50 text-emerald-700 ring-emerald-200", icon: FaCheckCircle },
 };
 
 const StatusBadge = ({ status }) => {
-  const config = statusConfig[status] || statusConfig.uploaded;
+  const config = STATUS_CONFIG[status] || STATUS_CONFIG.uploaded;
+  const Icon = config.icon;
+  const spinning = status === "in_progress";
   return (
-    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold capitalize ${config.bg}`}>
+    <span
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold capitalize ring-1 ring-inset ${config.classes}`}
+    >
+      <Icon className={`text-[11px] ${spinning ? "motion-safe:animate-spin" : ""}`} aria-hidden="true" />
       {config.label}
     </span>
   );
 };
 
 const RecentRFPTable = ({ rfps }) => {
+  // Loading state
   if (!rfps) {
     return (
-      <div className="bg-white rounded-xl shadow-sm border p-6 animate-pulse">
-        <div className="h-6 bg-gray-200 rounded w-32 mb-4" />
+      <div className="bg-white rounded-2xl ring-1 ring-slate-900/5 p-6 animate-pulse">
+        <div className="h-5 bg-slate-100 rounded w-32 mb-5" />
         {[...Array(5)].map((_, i) => (
-          <div key={i} className="flex justify-between py-3 border-b border-gray-100">
-            <div className="h-4 bg-gray-200 rounded w-1/3" />
-            <div className="h-4 bg-gray-200 rounded w-20" />
+          <div key={i} className="flex justify-between py-3 border-b border-slate-50 last:border-0">
+            <div className="h-4 bg-slate-100 rounded w-1/3" />
+            <div className="h-5 bg-slate-100 rounded-full w-20" />
           </div>
         ))}
       </div>
     );
   }
 
+  // Empty state
   if (rfps.length === 0) {
     return (
-      <div className="bg-white rounded-xl shadow-sm border p-6 text-center">
-        <h2 className="text-xl font-bold text-gray-800 mb-3">Recent RFPs</h2>
-        <p className="text-gray-500">No RFPs uploaded yet.</p>
+      <div className="bg-white rounded-2xl ring-1 ring-slate-900/5 p-8 text-center">
+        <div className="w-14 h-14 mx-auto rounded-2xl bg-blue-50 ring-1 ring-blue-100 flex items-center justify-center text-blue-600 text-xl mb-4">
+          <FaFileAlt />
+        </div>
+        <h2 className="text-base font-semibold text-slate-900 mb-1">Recent RFPs</h2>
+        <p className="text-slate-500 text-sm">No RFPs uploaded yet. Upload one to get started.</p>
       </div>
     );
   }
 
+  const visible = rfps.slice(0, 5);
+
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-      <h2 className="text-xl font-bold text-gray-800 mb-4">Recent RFPs</h2>
-      <div className="overflow-x-auto">
+    <div className="bg-white rounded-2xl ring-1 ring-slate-900/5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_24px_-12px_rgba(15,23,42,0.1)] transition-shadow duration-300 p-6">
+      <style>{`
+        @keyframes rowFadeIn {
+          from { opacity: 0; transform: translateY(4px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+
+      <div className="flex items-center gap-3 mb-4">
+        <div className="p-2.5 bg-blue-50 ring-1 ring-blue-100 rounded-xl text-blue-600">
+          <FaFileAlt className="text-base" aria-hidden="true" />
+        </div>
+        <h2 className="text-lg font-semibold text-slate-900 tracking-tight">Recent RFPs</h2>
+      </div>
+
+      {/* Desktop / tablet table */}
+      <div className="hidden sm:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-200 text-left">
-              <th className="pb-3 font-medium text-gray-500">Title</th>
-              <th className="pb-3 font-medium text-gray-500">Status</th>
-              <th className="pb-3 font-medium text-gray-500 text-right">Action</th>
+            <tr className="border-b border-slate-100 text-left">
+              <th className="pb-3 font-medium text-slate-400">Title</th>
+              <th className="pb-3 font-medium text-slate-400">Status</th>
+              <th className="pb-3 font-medium text-slate-400 text-right">Action</th>
             </tr>
           </thead>
           <tbody>
-            {rfps.slice(0, 5).map((rfp) => (
-              <tr key={rfp._id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                <td className="py-3 pr-4 text-gray-800 font-medium truncate max-w-[200px]">
+            {visible.map((rfp, index) => (
+              <tr
+                key={rfp._id}
+                className="border-b border-slate-50 last:border-0 hover:bg-slate-50/80 transition-colors"
+                style={{ animation: "rowFadeIn 0.35s ease-out both", animationDelay: `${index * 60}ms` }}
+              >
+                <td className="py-3 pr-4 text-slate-800 font-medium truncate max-w-[220px]">
                   {rfp.projectName || rfp.title || "Untitled"}
                 </td>
                 <td className="py-3">
@@ -64,7 +95,7 @@ const RecentRFPTable = ({ rfps }) => {
                 <td className="py-3 text-right">
                   <Link
                     to={`/rfp/${rfp._id}`}
-                    className="text-blue-600 hover:text-blue-800 font-medium inline-flex items-center gap-1"
+                    className="text-blue-600 hover:text-blue-800 font-medium inline-flex items-center gap-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                   >
                     View <span aria-hidden="true">→</span>
                   </Link>
@@ -74,9 +105,28 @@ const RecentRFPTable = ({ rfps }) => {
           </tbody>
         </table>
       </div>
+
+      {/* Mobile cards */}
+      <div className="sm:hidden space-y-3">
+        {visible.map((rfp, index) => (
+          <Link
+            key={rfp._id}
+            to={`/rfp/${rfp._id}`}
+            className="block p-3.5 rounded-xl ring-1 ring-slate-100 hover:ring-blue-200 hover:bg-blue-50/40 transition-colors"
+            style={{ animation: "rowFadeIn 0.35s ease-out both", animationDelay: `${index * 60}ms` }}
+          >
+            <p className="text-slate-800 font-medium truncate mb-2">{rfp.projectName || rfp.title || "Untitled"}</p>
+            <div className="flex items-center justify-between">
+              <StatusBadge status={rfp.status || "uploaded"} />
+              <span className="text-blue-600 text-sm font-medium">View →</span>
+            </div>
+          </Link>
+        ))}
+      </div>
+
       {rfps.length > 5 && (
-        <div className="mt-4 text-right">
-          <Link to="/rfps" className="text-sm text-blue-600 hover:underline">
+        <div className="mt-4 pt-4 border-t border-slate-50 text-right">
+          <Link to="/rfps" className="text-sm text-blue-600 hover:text-blue-800 hover:underline font-medium">
             View all RFPs →
           </Link>
         </div>

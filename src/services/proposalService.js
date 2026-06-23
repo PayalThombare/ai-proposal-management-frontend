@@ -26,3 +26,12 @@ export const approveProposal = async (id) => {
 
   return response.data;
 };
+
+export const rejectProposal = async (id, rejectionReason) => {
+  const response = await api.patch(
+    `/proposals/${id}/reject`,
+    { rejectionReason }
+  );
+
+  return response.data;
+};

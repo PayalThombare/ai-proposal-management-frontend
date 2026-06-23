@@ -4,33 +4,50 @@ import useAuth from "../hooks/useAuth";
 import {
   getProposalById,
   approveProposal,
+  rejectProposal,
 } from "../services/proposalService";
 
 /* ============================
-   TOAST
+   TOAST NOTIFICATION
 ============================ */
 const Toast = ({ message, type = "success", onClose }) => {
   useEffect(() => {
-    const t = setTimeout(onClose, 3500);
-    return () => clearTimeout(t);
+    const timer = setTimeout(onClose, 4000);
+    return () => clearTimeout(timer);
   }, [onClose]);
 
-  const bg =
-    type === "success"
-      ? "bg-green-50 border-green-500 text-green-800"
-      : "bg-red-50 border-red-500 text-red-800";
+  const styles = {
+    success: {
+      bg: "bg-emerald-50",
+      border: "border-emerald-200",
+      icon: "text-emerald-600",
+      text: "text-emerald-900",
+      symbol: "✓",
+    },
+    error: {
+      bg: "bg-rose-50",
+      border: "border-rose-200",
+      icon: "text-rose-600",
+      text: "text-rose-900",
+      symbol: "✕",
+    },
+  };
+
+  const style = styles[type] || styles.success;
 
   return (
     <div
-      className={`fixed bottom-5 right-5 z-50 flex items-center gap-3 px-5 py-3 rounded-lg shadow-xl border-l-4 transition-all ${bg}`}
+      className={`fixed bottom-6 right-6 z-50 flex items-start gap-3 px-5 py-4 rounded-xl shadow-lg border ${style.bg} ${style.border} animate-in fade-in slide-in-from-bottom-2 duration-300`}
       role="alert"
     >
-      <span className="text-lg font-bold">{type === "success" ? "✓" : "✕"}</span>
-      <p className="text-sm font-medium">{message}</p>
+      <span className={`text-lg font-bold mt-0.5 flex-shrink-0 ${style.icon}`}>
+        {style.symbol}
+      </span>
+      <p className={`text-sm font-medium ${style.text} flex-1`}>{message}</p>
       <button
         onClick={onClose}
-        className="ml-2 text-gray-500 hover:text-gray-700"
-        aria-label="Close"
+        className={`ml-2 text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0`}
+        aria-label="Close notification"
       >
         ✕
       </button>
@@ -41,25 +58,33 @@ const Toast = ({ message, type = "success", onClose }) => {
 /* ============================
    COLLAPSIBLE SECTION
 ============================ */
-const CollapsibleSection = ({ title, children, defaultOpen = true }) => {
+const CollapsibleSection = ({ title, children, defaultOpen = true, icon }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div className="bg-white rounded-xl border border-gray-200 shadow-xs overflow-hidden transition-shadow hover:shadow-sm">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex justify-between items-center px-6 py-4 text-left hover:bg-gray-50 transition-colors"
+        className="w-full flex justify-between items-center px-6 py-4 text-left hover:bg-gray-50 transition-colors group"
+        aria-expanded={isOpen}
       >
-        <h2 className="text-lg font-semibold text-gray-800">{title}</h2>
+        <div className="flex items-center gap-3">
+          {icon && <span className="text-lg text-gray-600">{icon}</span>}
+          <h2 className="text-base font-semibold text-gray-900">{title}</h2>
+        </div>
         <span
-          className={`transform transition-transform duration-200 ${
+          className={`transform transition-transform duration-300 text-gray-400 group-hover:text-gray-600 ${
             isOpen ? "rotate-180" : ""
           }`}
         >
           ▼
         </span>
       </button>
-      {isOpen && <div className="px-6 pb-6 pt-0">{children}</div>}
+      {isOpen && (
+        <div className="px-6 pb-6 pt-2 border-t border-gray-100">
+          {children}
+        </div>
+      )}
     </div>
   );
 };
@@ -74,40 +99,57 @@ const RejectModal = ({ isOpen, onClose, onSubmit, loading }) => {
     if (!reason.trim()) return;
     onSubmit(reason.trim());
     setReason("");
-    onClose();
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 transform transition-all">
-        <h3 className="text-xl font-bold text-gray-900 mb-2">
-          Reject Proposal
-        </h3>
-        <p className="text-gray-500 mb-4 text-sm">
-          Please provide a reason for rejection. This will be visible to the team.
-        </p>
-        <textarea
-          className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none resize-none"
-          rows={4}
-          placeholder="Enter rejection reason..."
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-        />
-        <div className="flex justify-end gap-3 mt-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all animate-in fade-in zoom-in-95">
+        <div className="px-6 py-5 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">Reject Proposal</h3>
+          <p className="text-sm text-gray-500 mt-1">
+            Provide feedback for the team.
+          </p>
+        </div>
+
+        <div className="px-6 py-5 space-y-4">
+          <textarea
+            className="w-full border border-gray-300 rounded-lg p-3 text-sm placeholder-gray-400 focus:ring-2 focus:ring-rose-500 focus:border-transparent outline-none resize-none transition-all"
+            rows={4}
+            placeholder="Explain why this proposal doesn't meet requirements..."
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            maxLength={500}
+          />
+          <p className="text-xs text-gray-400 text-right">
+            {reason.length}/500
+          </p>
+        </div>
+
+        <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3 border-t border-gray-200 rounded-b-2xl">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
+            className="px-4 py-2.5 text-gray-700 hover:text-gray-900 font-medium text-sm transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={!reason.trim() || loading}
-            className="px-5 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-medium text-sm rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
           >
-            {loading ? "Rejecting..." : "Confirm Rejection"}
+            {loading ? (
+              <>
+                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Rejecting…
+              </>
+            ) : (
+              "Confirm Rejection"
+            )}
           </button>
         </div>
       </div>
@@ -116,127 +158,138 @@ const RejectModal = ({ isOpen, onClose, onSubmit, loading }) => {
 };
 
 /* ============================
-   HELPER: PARSE MARKDOWN-LIKE TEXT
-============================ */
-/* ============================
-   HELPER: PARSE MARKDOWN-LIKE TEXT (FIXED)
+   MARKDOWN PARSER (FIXED)
 ============================ */
 const parseMarkdownToElements = (text) => {
-  if (!text) return [];
+  if (!text || typeof text !== "string") return [];
+
   const lines = text.split("\n");
   const elements = [];
 
-  const headingRegex = /^(#{1,6})\s+(.+)/;
-  const listRegex = /^(\s*[-*•]\s+)(.+)/;
-  const numberedListRegex = /^(\s*\d+[.)]\s+)(.+)/;
-  const boldRegex = /\*\*(.*?)\*\*/g;
-  const italicRegex = /\*(.*?)\*/g;
-  const inlineCodeRegex = /`([^`]+)`/g;
-  const linkRegex = /\[(.*?)\]\((.*?)\)/g;
+  const headingRegex = /^(#{1,6})\s+(.+)$/;
+  const bulletRegex = /^(\s*)[-*]\s+(.+)$/;
+  const numberedRegex = /^(\s*)\d+[.)]\s+(.+)$/;
 
-  const applyInline = (str) => {
-    return str
-      .split(/(\*\*.*?\*\*|\*.*?\*|`[^`]+`|\[.*?\]\(.*?\))/)
-      .map((part, i) => {
-        if (boldRegex.test(part)) {
-          const content = part.replace(/\*\*/g, "");
-          return <strong key={i}>{content}</strong>;
-        }
-        if (italicRegex.test(part)) {
-          const content = part.replace(/\*/g, "");
-          return <em key={i}>{content}</em>;
-        }
-        if (inlineCodeRegex.test(part)) {
-          const content = part.replace(/`/g, "");
-          return (
-            <code key={i} className="bg-gray-100 text-red-600 px-1 rounded text-sm">
-              {content}
-            </code>
-          );
-        }
-        if (linkRegex.test(part)) {
-          const match = part.match(/\[(.*?)\]\((.*?)\)/);
-          if (match) {
-            return (
-              <a
-                key={i}
-                href={match[2]}
-                target="_blank"
-                rel="noreferrer"
-                className="text-blue-600 underline"
-              >
-                {match[1]}
-              </a>
-            );
-          }
-        }
-        return part;
-      });
+  const applyInlineFormatting = (str) => {
+    if (!str) return str;
+
+    const parts = [];
+    let lastIndex = 0;
+
+    // Process bold, italic, code, and links
+    const regex = /\*\*(.+?)\*\*|\*(.+?)\*|`([^`]+)`|\[([^\]]+)\]\(([^)]+)\)/g;
+    let match;
+
+    while ((match = regex.exec(str)) !== null) {
+      // Add text before match
+      if (match.index > lastIndex) {
+        parts.push(
+          <span key={`text-${lastIndex}`}>
+            {str.substring(lastIndex, match.index)}
+          </span>
+        );
+      }
+
+      if (match[1]) {
+        // Bold
+        parts.push(
+          <strong key={`bold-${match.index}`}>{match[1]}</strong>
+        );
+      } else if (match[2]) {
+        // Italic
+        parts.push(
+          <em key={`italic-${match.index}`}>{match[2]}</em>
+        );
+      } else if (match[3]) {
+        // Inline code
+        parts.push(
+          <code
+            key={`code-${match.index}`}
+            className="bg-gray-100 text-gray-800 px-2 py-1 rounded font-mono text-xs"
+          >
+            {match[3]}
+          </code>
+        );
+      } else if (match[4] && match[5]) {
+        // Link
+        parts.push(
+          <a
+            key={`link-${match.index}`}
+            href={match[5]}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:text-blue-700 underline transition-colors"
+          >
+            {match[4]}
+          </a>
+        );
+      }
+
+      lastIndex = regex.lastIndex;
+    }
+
+    // Add remaining text
+    if (lastIndex < str.length) {
+      parts.push(
+        <span key={`text-end`}>
+          {str.substring(lastIndex)}
+        </span>
+      );
+    }
+
+    return parts.length > 0 ? parts : str;
   };
 
   let i = 0;
   while (i < lines.length) {
     const line = lines[i];
+
+    // Skip empty lines
     if (!line.trim()) {
       i++;
       continue;
     }
 
-    // Heading – explicit tag by level (avoids JSX.IntrinsicElements)
+    // Headings
     const headingMatch = line.match(headingRegex);
     if (headingMatch) {
       const level = headingMatch[1].length;
       const content = headingMatch[2];
       const className =
         level === 1
+          ? "text-3xl font-bold"
+          : level === 2
           ? "text-2xl font-bold"
-          : "text-xl font-semibold";
-      // Map to real elements
-      switch (level) {
-        case 1:
-          elements.push(
-            <h1 key={i} className={`${className} text-gray-900 mt-6 mb-2`}>
-              {content}
-            </h1>
-          );
-          break;
-        case 2:
-          elements.push(
-            <h2 key={i} className={`${className} text-gray-900 mt-5 mb-2`}>
-              {content}
-            </h2>
-          );
-          break;
-        case 3:
-          elements.push(
-            <h3 key={i} className={`${className} text-gray-900 mt-4 mb-2`}>
-              {content}
-            </h3>
-          );
-          break;
-        default: // 4-6 treated as h4
-          elements.push(
-            <h4 key={i} className="text-lg font-semibold text-gray-900 mt-3 mb-2">
-              {content}
-            </h4>
-          );
-      }
+          : level === 3
+          ? "text-xl font-semibold"
+          : "text-lg font-semibold";
+
+      elements.push(
+        <div key={`heading-${i}`} className={`${className} text-gray-900 mt-8 mb-4`}>
+          {applyInlineFormatting(content)}
+        </div>
+      );
       i++;
       continue;
     }
 
     // Bullet list
-    if (listRegex.test(line)) {
+    if (bulletRegex.test(line)) {
       const items = [];
-      while (i < lines.length && listRegex.test(lines[i])) {
-        const m = lines[i].match(listRegex);
-        if (m) items.push(m[2]);
+      while (i < lines.length && bulletRegex.test(lines[i])) {
+        const match = lines[i].match(bulletRegex);
+        if (match) items.push(match[2]);
         i++;
       }
       elements.push(
-        <ul key={i} className="list-disc list-inside space-y-1 ml-4 my-3 text-gray-700">
+        <ul
+          key={`list-${i}`}
+          className="space-y-2 my-4 ml-4 text-gray-700 list-disc list-outside"
+        >
           {items.map((item, idx) => (
-            <li key={idx}>{applyInline(item)}</li>
+            <li key={idx} className="leading-relaxed">
+              {applyInlineFormatting(item)}
+            </li>
           ))}
         </ul>
       );
@@ -244,35 +297,41 @@ const parseMarkdownToElements = (text) => {
     }
 
     // Numbered list
-    if (numberedListRegex.test(line)) {
+    if (numberedRegex.test(line)) {
       const items = [];
-      while (i < lines.length && numberedListRegex.test(lines[i])) {
-        const m = lines[i].match(numberedListRegex);
-        if (m) items.push(m[2]);
+      while (i < lines.length && numberedRegex.test(lines[i])) {
+        const match = lines[i].match(numberedRegex);
+        if (match) items.push(match[2]);
         i++;
       }
       elements.push(
-        <ol key={i} className="list-decimal list-inside space-y-1 ml-4 my-3 text-gray-700">
+        <ol
+          key={`ordered-${i}`}
+          className="space-y-2 my-4 ml-4 text-gray-700 list-decimal list-outside"
+        >
           {items.map((item, idx) => (
-            <li key={idx}>{applyInline(item)}</li>
+            <li key={idx} className="leading-relaxed">
+              {applyInlineFormatting(item)}
+            </li>
           ))}
         </ol>
       );
       continue;
     }
 
-    // Regular paragraph
-    let paraLines = [];
-    while (i < lines.length && lines[i].trim() !== "" && !headingRegex.test(lines[i])) {
-      paraLines.push(lines[i]);
+    // Paragraph
+    let paraText = line.trim();
+    while (i + 1 < lines.length && lines[i + 1].trim() && !headingRegex.test(lines[i + 1]) && !bulletRegex.test(lines[i + 1]) && !numberedRegex.test(lines[i + 1])) {
       i++;
+      paraText += " " + lines[i].trim();
     }
-    const para = paraLines.join(" ");
+
     elements.push(
-      <p key={i} className="text-gray-800 leading-relaxed mb-4 text-justify">
-        {applyInline(para)}
+      <p key={`para-${i}`} className="text-gray-700 leading-relaxed mb-5">
+        {applyInlineFormatting(paraText)}
       </p>
     );
+    i++;
   }
 
   return elements;
@@ -285,21 +344,25 @@ const ProposalDocument = ({ proposalContent }) => {
   const elements = parseMarkdownToElements(proposalContent);
 
   return (
-    <div className="max-w-4xl mx-auto bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden print:shadow-none print:border-0">
-      {/* Document letterhead */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-5 print:bg-white print:border-b print:border-gray-300">
-        <h2 className="text-2xl font-bold text-white print:text-black">
+    <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden print:shadow-none print:border-0 print:rounded-none">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-slate-800 to-slate-900 px-8 py-6 print:bg-white print:border-b print:border-gray-300">
+        <h2 className="text-2xl font-bold text-white print:text-gray-900">
           Proposal Document
         </h2>
-        <p className="text-blue-100 text-sm print:text-gray-600">Confidential</p>
+        <p className="text-slate-300 text-xs tracking-wide mt-1 print:text-gray-500">
+          CONFIDENTIAL & PROPRIETARY
+        </p>
       </div>
 
-      {/* Content area */}
-      <div className="px-8 py-8 font-serif text-gray-800 leading-7 print:px-0 print:py-6">
+      {/* Content */}
+      <div className="px-8 py-8 prose prose-sm max-w-none print:px-6 print:py-6 space-y-6">
         {elements.length > 0 ? (
           elements
         ) : (
-          <p className="text-gray-500 italic">No content to display.</p>
+          <p className="text-gray-400 italic text-center py-12">
+            No proposal content to display.
+          </p>
         )}
       </div>
     </div>
@@ -310,32 +373,60 @@ const ProposalDocument = ({ proposalContent }) => {
    ACTIVITY TIMELINE
 ============================ */
 const ActivityTimeline = ({ activities }) => {
-  if (!activities || activities.length === 0) return null;
+  if (!activities || activities.length === 0) {
+    return (
+      <p className="text-gray-500 text-sm italic">No activity recorded yet.</p>
+    );
+  }
+
+  const getActivityIcon = (type) => {
+    switch (type) {
+      case "approved":
+        return "✓";
+      case "rejected":
+        return "✕";
+      case "created":
+        return "◦";
+      default:
+        return "•";
+    }
+  };
+
+  const getActivityColor = (type) => {
+    switch (type) {
+      case "approved":
+        return "bg-emerald-100 text-emerald-700";
+      case "rejected":
+        return "bg-rose-100 text-rose-700";
+      case "created":
+        return "bg-slate-100 text-slate-700";
+      default:
+        return "bg-blue-100 text-blue-700";
+    }
+  };
 
   return (
     <div className="space-y-4">
-      {activities.map((act, idx) => (
-        <div key={idx} className="flex gap-3">
+      {activities.map((activity, idx) => (
+        <div key={idx} className="flex gap-4">
           <div className="flex flex-col items-center">
             <div
-              className={`w-3 h-3 rounded-full ${
-                act.type === "approved"
-                  ? "bg-green-500"
-                  : act.type === "rejected"
-                  ? "bg-red-500"
-                  : "bg-blue-500"
-              }`}
-            />
+              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${getActivityColor(
+                activity.type
+              )}`}
+            >
+              {getActivityIcon(activity.type)}
+            </div>
             {idx < activities.length - 1 && (
-              <div className="w-0.5 h-full bg-gray-200" />
+              <div className="w-0.5 h-12 bg-gray-200 mt-2" />
             )}
           </div>
-          <div className="pb-4">
-            <p className="text-sm text-gray-800 font-medium">
-              {act.description}
+          <div className="pb-2 flex-1">
+            <p className="text-sm font-medium text-gray-900">
+              {activity.description}
             </p>
-            <p className="text-xs text-gray-500">
-              {new Date(act.timestamp).toLocaleString()} — by {act.user}
+            <p className="text-xs text-gray-500 mt-1">
+              {new Date(activity.timestamp).toLocaleString()} • {activity.user}
             </p>
           </div>
         </div>
@@ -345,7 +436,77 @@ const ActivityTimeline = ({ activities }) => {
 };
 
 /* ============================
-   MAIN PROPOSAL DETAILS
+   INFO ITEM COMPONENT
+============================ */
+const InfoItem = ({ label, value, icon }) => (
+  <div className="p-4 rounded-lg bg-gray-50 border border-gray-100 hover:border-gray-200 transition-colors">
+    <div className="flex items-center gap-2 mb-2">
+      {icon && <span className="text-lg">{icon}</span>}
+      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+        {label}
+      </p>
+    </div>
+    <p className="text-gray-900 font-medium capitalize">
+      {value ? (
+        typeof value === "string" ? value.replace(/_/g, " ") : value
+      ) : (
+        <span className="text-gray-400">—</span>
+      )}
+    </p>
+  </div>
+);
+
+/* ============================
+   STATUS BADGE
+============================ */
+const StatusBadge = ({ status }) => {
+  const statusConfig = {
+    draft: {
+      bg: "bg-gray-100",
+      text: "text-gray-700",
+      icon: "◦",
+      label: "Draft",
+    },
+    pending: {
+      bg: "bg-amber-100",
+      text: "text-amber-800",
+      icon: "⏳",
+      label: "Pending Review",
+    },
+    in_review: {
+      bg: "bg-blue-100",
+      text: "text-blue-800",
+      icon: "👁",
+      label: "In Review",
+    },
+    approved: {
+      bg: "bg-emerald-100",
+      text: "text-emerald-800",
+      icon: "✓",
+      label: "Approved",
+    },
+    rejected: {
+      bg: "bg-rose-100",
+      text: "text-rose-800",
+      icon: "✕",
+      label: "Rejected",
+    },
+  };
+
+  const config = statusConfig[status] || statusConfig.draft;
+
+  return (
+    <div
+      className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-full font-medium text-sm ${config.bg} ${config.text}`}
+    >
+      <span className="text-base">{config.icon}</span>
+      {config.label}
+    </div>
+  );
+};
+
+/* ============================
+   MAIN COMPONENT
 ============================ */
 const ProposalDetails = () => {
   const { id } = useParams();
@@ -354,104 +515,125 @@ const ProposalDetails = () => {
   const [proposal, setProposal] = useState(null);
   const [loading, setLoading] = useState(true);
   const [approving, setApproving] = useState(false);
-  const [rejecting, setRejecting] = useState(false);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
-  const [toast, setToast] = useState({ show: false, message: "", type: "success" });
+  const [toast, setToast] = useState({
+    show: false,
+    message: "",
+    type: "success",
+  });
 
   const showToast = useCallback((message, type = "success") => {
     setToast({ show: true, message, type });
   }, []);
-  const closeToast = useCallback(() => setToast((p) => ({ ...p, show: false })), []);
 
-  // Fetch
+  const closeToast = useCallback(
+    () => setToast((prev) => ({ ...prev, show: false })),
+    []
+  );
+
+  // Fetch proposal
   useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
+    let isMounted = true;
+
+    const fetchProposal = async () => {
       try {
         setLoading(true);
         const response = await getProposalById(id);
-        if (!cancelled) setProposal(response.data);
-      } catch (err) {
-        console.error("Failed to load proposal:", err);
-        if (!cancelled) showToast("Failed to load proposal", "error");
+        if (isMounted) setProposal(response.data);
+      } catch (error) {
+        if (isMounted) {
+          console.error("Failed to load proposal:", error);
+          showToast(
+            error?.response?.data?.message || "Failed to load proposal",
+            "error"
+          );
+        }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
-    load();
+
+    fetchProposal();
     return () => {
-      cancelled = true;
+      isMounted = false;
     };
   }, [id, showToast]);
 
-  // Approve
+  // Handle approve
   const handleApprove = async () => {
     try {
       setApproving(true);
       await approveProposal(id);
       showToast("Proposal approved successfully!");
-      const res = await getProposalById(id);
-      setProposal(res.data);
-    } catch (err) {
-      showToast(err?.response?.data?.message || "Approval failed", "error");
+      const response = await getProposalById(id);
+      setProposal(response.data);
+    } catch (error) {
+      showToast(
+        error?.response?.data?.message || "Failed to approve proposal",
+        "error"
+      );
     } finally {
       setApproving(false);
     }
   };
 
-  // Reject
+  // Handle reject
   const handleReject = async (reason) => {
     try {
-      setRejecting(true);
       await rejectProposal(id, { reason });
       showToast("Proposal rejected.");
-      const res = await getProposalById(id);
-      setProposal(res.data);
-    } catch (err) {
-      showToast(err?.response?.data?.message || "Rejection failed", "error");
+      const response = await getProposalById(id);
+      setProposal(response.data);
+    } catch (error) {
+      showToast(
+        error?.response?.data?.message || "Failed to reject proposal",
+        "error"
+      );
     } finally {
-      setRejecting(false);
       setRejectModalOpen(false);
     }
   };
 
   // Copy share link
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(window.location.href);
-    showToast("Link copied to clipboard");
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      showToast("Link copied to clipboard");
+    } catch {
+      showToast("Failed to copy link", "error");
+    }
   };
 
   // Print
-  const handlePrint = () => window.print();
+  const handlePrint = () => {
+    window.print();
+  };
 
   // Loading skeleton
   if (loading) {
     return (
-      <div className="max-w-6xl mx-auto space-y-8 pb-16 px-4 sm:px-6 lg:px-8 animate-pulse">
-        <div className="flex flex-col sm:flex-row gap-4 justify-between">
-          <div>
-            <div className="h-8 bg-gray-200 rounded w-48 mb-2" />
-            <div className="h-4 bg-gray-200 rounded w-64" />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8 animate-pulse">
+        <div className="flex justify-between items-start">
+          <div className="space-y-2">
+            <div className="h-9 bg-gray-200 rounded w-64" />
+            <div className="h-4 bg-gray-200 rounded w-96" />
           </div>
-          <div className="h-8 bg-gray-200 rounded-full w-24" />
+          <div className="h-10 bg-gray-200 rounded-full w-32" />
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
+        <div className="flex gap-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-10 bg-gray-200 rounded-lg w-32" />
+          ))}
+        </div>
+        <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
           <div className="h-6 bg-gray-200 rounded w-40" />
           <div className="grid grid-cols-3 gap-4">
-            {[...Array(3)].map((_, i) => (
+            {[1, 2, 3].map((i) => (
               <div key={i} className="space-y-2">
-                <div className="h-4 bg-gray-200 rounded w-16" />
-                <div className="h-5 bg-gray-200 rounded w-24" />
+                <div className="h-4 bg-gray-200 rounded w-20" />
+                <div className="h-5 bg-gray-200 rounded w-32" />
               </div>
             ))}
-          </div>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
-          <div className="h-6 bg-gray-200 rounded w-40" />
-          <div className="space-y-3">
-            <div className="h-4 bg-gray-200 rounded w-full" />
-            <div className="h-4 bg-gray-200 rounded w-5/6" />
-            <div className="h-4 bg-gray-200 rounded w-3/4" />
           </div>
         </div>
       </div>
@@ -460,174 +642,204 @@ const ProposalDetails = () => {
 
   if (!proposal) {
     return (
-      <div className="text-center py-16">
-        <h2 className="text-2xl font-bold text-gray-800">Proposal Not Found</h2>
-        <p className="text-gray-500 mt-2">The requested proposal could not be loaded.</p>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+        <div className="inline-flex justify-center items-center w-16 h-16 rounded-full bg-gray-100 mb-4">
+          <span className="text-2xl">📄</span>
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900 mt-4">
+          Proposal Not Found
+        </h2>
+        <p className="text-gray-500 mt-2 max-w-md mx-auto">
+          The proposal you're looking for doesn't exist or has been deleted.
+        </p>
       </div>
     );
   }
 
-  // Status colour mapping
-  const statusColor = {
-    draft: "bg-gray-100 text-gray-700",
-    pending: "bg-yellow-100 text-yellow-800",
-    in_review: "bg-blue-100 text-blue-800",
-    approved: "bg-green-100 text-green-800",
-    rejected: "bg-red-100 text-red-800",
-  };
-
   const isManager = user?.role === "manager";
-  const canApprove = isManager && proposal.status !== "approved" && proposal.status !== "rejected";
+  const canApprove =
+    isManager &&
+    proposal.status !== "approved" &&
+    proposal.status !== "rejected";
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 pb-16 px-4 sm:px-6 lg:px-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Proposal Details</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Review, manage and track this proposal.
-          </p>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+      {/* Header section */}
+      <div className="mb-8">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-6">
+          <div>
+            <h1 className="text-4xl font-bold text-gray-900">Proposal Details</h1>
+            <p className="text-gray-600 mt-2">
+              Review and manage this proposal submission.
+            </p>
+          </div>
+          <StatusBadge status={proposal.status} />
         </div>
-        <span
-          className={`self-start px-4 py-2 rounded-full text-sm font-semibold tracking-wide capitalize ${
-            statusColor[proposal.status] || "bg-gray-100 text-gray-700"
-          }`}
-        >
-          {proposal.status.replace(/_/g, " ")}
-        </span>
-      </div>
 
-      {/* Quick actions */}
-      <div className="flex flex-wrap items-center gap-3">
-        <button
-          onClick={handlePrint}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a2 2 0 002 2h6a2 2 0 002-2v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm8 0H7v3h6V4zm0 8H7v4h6v-4z" clipRule="evenodd" />
-          </svg>
-          Print
-        </button>
-        <button
-          onClick={handleCopyLink}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M8 2a1 1 0 000 2h2a1 1 0 100-2H8z" />
-            <path d="M3 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v6h-4.586l1.293-1.293a1 1 0 00-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L10.414 13H15v3a2 2 0 01-2 2H5a2 2 0 01-2-2V5z" />
-          </svg>
-          Copy link
-        </button>
-        {proposal.pdfUrl && (
-          <a
-            href={proposal.pdfUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-            </svg>
-            PDF
-          </a>
-        )}
-      </div>
-
-      {/* Meta info */}
-      <CollapsibleSection title="Proposal Information">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <InfoItem label="Status" value={proposal.status} />
-          <InfoItem label="Version" value={proposal.version} />
-          <InfoItem
-            label="Created At"
-            value={new Date(proposal.createdAt).toLocaleString()}
+        {/* Action buttons */}
+        <div className="flex flex-wrap items-center gap-3">
+          <ActionButton
+            icon="🖨"
+            label="Print"
+            onClick={handlePrint}
+            variant="secondary"
           />
-          {proposal.updatedAt && (
-            <InfoItem
-              label="Last Updated"
-              value={new Date(proposal.updatedAt).toLocaleString()}
-            />
+          <ActionButton
+            icon="🔗"
+            label="Copy Link"
+            onClick={handleCopyLink}
+            variant="secondary"
+          />
+          {proposal.pdfUrl && (
+            <a
+              href={proposal.pdfUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
+            >
+              <span>📥</span>
+              Download PDF
+            </a>
           )}
         </div>
-      </CollapsibleSection>
+      </div>
 
-      {/* Professional Document */}
-      <CollapsibleSection title="Generated Proposal" defaultOpen={true}>
-        {proposal.proposalContent ? (
-          <ProposalDocument proposalContent={proposal.proposalContent} />
-        ) : (
-          <div className="text-center py-10 text-gray-500 italic">
-            No proposal text generated.
+      {/* Main content sections */}
+      <div className="space-y-6">
+        {/* Proposal information */}
+        <CollapsibleSection title="Proposal Information" icon="ℹ" defaultOpen={true}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <InfoItem
+              icon="📊"
+              label="Status"
+              value={proposal.status}
+            />
+            <InfoItem
+              icon="📌"
+              label="Version"
+              value={`v${proposal.version || "1.0"}`}
+            />
+            <InfoItem
+              icon="📅"
+              label="Created"
+              value={new Date(proposal.createdAt).toLocaleDateString()}
+            />
+            {proposal.updatedAt && (
+              <InfoItem
+                icon="🔄"
+                label="Last Updated"
+                value={new Date(proposal.updatedAt).toLocaleDateString()}
+              />
+            )}
+            {proposal.author && (
+              <InfoItem
+                icon="👤"
+                label="Author"
+                value={proposal.author}
+              />
+            )}
+            {proposal.department && (
+              <InfoItem
+                icon="🏢"
+                label="Department"
+                value={proposal.department}
+              />
+            )}
+          </div>
+        </CollapsibleSection>
+
+        {/* Proposal document */}
+        <CollapsibleSection title="Generated Proposal" icon="📄" defaultOpen={true}>
+          {proposal.proposalContent ? (
+            <ProposalDocument proposalContent={proposal.proposalContent} />
+          ) : (
+            <div className="text-center py-16 text-gray-400">
+              <span className="text-4xl mb-4 block">📋</span>
+              <p className="text-sm">No proposal content available.</p>
+            </div>
+          )}
+        </CollapsibleSection>
+
+        {/* Activity timeline */}
+        {proposal.activities && proposal.activities.length > 0 && (
+          <CollapsibleSection title="Activity Log" icon="📊" defaultOpen={false}>
+            <ActivityTimeline activities={proposal.activities} />
+          </CollapsibleSection>
+        )}
+
+        {/* Manager actions */}
+        {canApprove && (
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-6 border-t border-gray-200">
+            <button
+              onClick={() => setRejectModalOpen(true)}
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-rose-600 hover:bg-rose-700 text-white font-medium rounded-lg transition-all shadow-sm hover:shadow-md active:shadow-sm"
+            >
+              <span>✕</span>
+              Reject Proposal
+            </button>
+            <button
+              onClick={handleApprove}
+              disabled={approving}
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed active:shadow-sm"
+            >
+              {approving ? (
+                <>
+                  <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Approving…
+                </>
+              ) : (
+                <>
+                  <span>✓</span>
+                  Approve Proposal
+                </>
+              )}
+            </button>
           </div>
         )}
-      </CollapsibleSection>
+      </div>
 
-      {/* Activity Timeline (if data available) */}
-      {proposal.activities && proposal.activities.length > 0 && (
-        <CollapsibleSection title="Activity Log">
-          <ActivityTimeline activities={proposal.activities} />
-        </CollapsibleSection>
-      )}
-
-      {/* Manager decision buttons */}
-      {canApprove && (
-        <div className="flex justify-end gap-4">
-          <button
-            onClick={() => setRejectModalOpen(true)}
-            className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors shadow-md hover:shadow-lg flex items-center gap-2"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-            </svg>
-            Reject
-          </button>
-          <button
-            onClick={handleApprove}
-            disabled={approving}
-            className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            {approving ? (
-              <>
-                <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                Approving…
-              </>
-            ) : (
-              <>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-                Approve
-              </>
-            )}
-          </button>
-        </div>
-      )}
-
-      {/* Reject modal */}
+      {/* Modals and notifications */}
       <RejectModal
         isOpen={rejectModalOpen}
         onClose={() => setRejectModalOpen(false)}
         onSubmit={handleReject}
-        loading={rejecting}
+        loading={false}
       />
 
-      {/* Toast */}
       {toast.show && (
-        <Toast message={toast.message} type={toast.type} onClose={closeToast} />
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={closeToast}
+        />
       )}
     </div>
   );
 };
 
-const InfoItem = ({ label, value }) => (
-  <div>
-    <p className="text-sm font-medium text-gray-500">{label}</p>
-    <p className="text-gray-800 mt-0.5 capitalize">{value || "—"}</p>
-  </div>
-);
+/* ============================
+   ACTION BUTTON HELPER
+============================ */
+const ActionButton = ({ icon, label, onClick, variant = "primary" }) => {
+  const styles = {
+    primary:
+      "bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-md",
+    secondary:
+      "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200",
+  };
+
+  return (
+    <button
+      onClick={onClick}
+      className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${styles[variant]}`}
+    >
+      <span>{icon}</span>
+      {label}
+    </button>
+  );
+};
 
 export default ProposalDetails;
