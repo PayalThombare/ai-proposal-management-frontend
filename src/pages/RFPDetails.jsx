@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { getRFPById } from "../services/rfpService";
-import { createProposal } from "../services/proposalService";
+import { createProposal,  getProposalByRfpId, downloadProposalPdf} from "../services/proposalService";
+
 
 // ------------------------------
 // Reusable Toast Component
@@ -41,6 +42,7 @@ const Toast = ({ message, type = "success", onClose }) => {
 const CollapsibleSection = ({ title, children, defaultOpen = true }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
       <button
@@ -74,6 +76,24 @@ const safeRenderValue = (value) => {
   }
 };
 
+
+// const handleDownload = async () => {
+  
+//   try {
+//     const response = await downloadProposalPdf(
+//       proposal._id
+//     );
+
+//     window.open(
+//       response.pdfUrl,
+//       "_blank"
+//     );
+
+//   } catch (error) {
+//     console.log(error);
+//   }
+// };
+
 // ------------------------------
 // Helper: safely convert array items to string list
 // ------------------------------
@@ -101,6 +121,7 @@ const RFPDetails = () => {
   const { id } = useParams();
 
   const [rfp, setRfp] = useState(null);
+    const [proposal, setProposal] = useState(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [proposalContent, setProposalContent] = useState(null);
@@ -111,133 +132,160 @@ const RFPDetails = () => {
   }, []);
   const closeToast = useCallback(() => setToast((prev) => ({ ...prev, show: false })), []);
 
+
+const handleDownload = async () => {
+  try {
+    const response = await downloadProposalPdf(
+      proposal._id
+    );
+
+    console.log(response);
+    console.log(
+  "DOWNLOAD RESPONSE",
+  response
+);
+
+    const pdfUrl =
+      response?.data?.pdfUrl ||
+      response?.pdfUrl;
+
+    if (!pdfUrl) {
+      console.log("PDF URL Missing", response);
+      return;
+    }
+
+    window.open(pdfUrl, "_blank");
+  } catch (error) {
+    console.log(error);
+  }
+};
+
   // Fetch RFP
-  useEffect(() => {
-    let cancelled = false;
-    const fetchRFP = async () => {
-      try {
-        const response = await getRFPById(id);
-        if (!cancelled) setRfp(response.data);
-      } catch (error) {
-        if (!cancelled) {
-          console.error("Failed to load RFP:", error);
-          showToast("Failed to load RFP details", "error");
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-    fetchRFP();
-    return () => { cancelled = true; };
-  }, [id, showToast]);
+useEffect(() => {
+  let cancelled = false;
 
-  // Generate proposal
-  const handleGenerateProposal = async () => {
+  const fetchData = async () => {
     try {
-      setGenerating(true);
-      const content = `
-========================================
-PROJECT OVERVIEW
-========================================
+      const response = await getRFPById(id);
 
-Project Name: ${rfp.projectName}
-Client Name: ${rfp.clientName}
-Client Email: ${rfp.clientEmail}
-Company: ${rfp.clientCompany}
+      if (!cancelled) {
+        setRfp(response.data);
+      }
 
-========================================
-REQUIREMENTS ANALYSIS
-========================================
+      try {
+        const proposal =
+          await getProposalByRfpId(id);
 
-Functional Requirements:
-${rfp.requirements?.functionalRequirements?.join("\n") || "N/A"}
-
-Non‑Functional Requirements:
-${rfp.requirements?.nonFunctionalRequirements?.join("\n") || "N/A"}
-
-Technologies:
-${rfp.requirements?.technologies?.join("\n") || "N/A"}
-
-Scope: ${rfp.requirements?.scope || "N/A"}
-
-========================================
-BUSINESS ANALYSIS
-========================================
-
-Project Type: ${rfp.businessAnalysis?.projectType || "N/A"}
-Complexity: ${rfp.businessAnalysis?.complexity || "N/A"}
-
-Major Modules:
-${rfp.businessAnalysis?.majorModules?.join("\n") || "N/A"}
-
-Key Features:
-${rfp.businessAnalysis?.keyFeatures?.join("\n") || "N/A"}
-
-Dependencies:
-${rfp.businessAnalysis?.dependencies?.join("\n") || "N/A"}
-
-Assumptions:
-${rfp.businessAnalysis?.assumptions?.join("\n") || "N/A"}
-
-========================================
-RISK ANALYSIS
-========================================
-
-Technical Risks:
-${rfp.riskAnalysis?.technicalRisks?.join("\n") || "N/A"}
-
-Resource Risks:
-${rfp.riskAnalysis?.resourceRisks?.join("\n") || "N/A"}
-
-Timeline Risks:
-${rfp.riskAnalysis?.timelineRisks?.join("\n") || "N/A"}
-
-Security Risks:
-${rfp.riskAnalysis?.securityRisks?.join("\n") || "N/A"}
-
-Mitigation Strategies:
-${rfp.riskAnalysis?.mitigationStrategies?.join("\n") || "N/A"}
-
-========================================
-COST ESTIMATION
-========================================
-
-Complexity: ${safeRenderValue(rfp.costEstimation?.complexity)}
-Team Size: ${safeRenderValue(rfp.costEstimation?.estimatedTeamSize)}
-Duration: ${safeRenderValue(rfp.costEstimation?.estimatedDuration)}
-Estimated Cost: ${safeRenderValue(rfp.costEstimation?.estimatedCost)}
-Development Effort: ${safeRenderValue(rfp.costEstimation?.developmentEffort)}
-
-Recommendations:
-${rfp.costEstimation?.recommendations?.join("\n") || "N/A"}
-
-========================================
-END OF PROPOSAL
-========================================
-`;
-      await createProposal({ rfpId: rfp._id, proposalContent: content });
-      setProposalContent(content);
-      showToast("Proposal generated successfully!", "success");
+        if (
+          !cancelled &&
+          proposal?.data?.proposalContent
+        ) {
+          setProposalContent(
+            proposal.data.proposalContent
+          );
+          setProposal(proposal.data);
+        }
+      } catch (err) {
+        console.log("No proposal found", err);
+      }
     } catch (error) {
-      console.error("Proposal generation failed:", error);
-      showToast(error?.response?.data?.message || "Failed to generate proposal", "error");
+      console.error(error);
     } finally {
-      setGenerating(false);
+      if (!cancelled) {
+        setLoading(false);
+      }
     }
   };
 
-  const downloadProposal = () => {
-    if (!proposalContent) return;
-    const blob = new Blob([proposalContent], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `Proposal_${rfp.projectName.replace(/\s+/g, "_")}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  fetchData();
+
+  return () => {
+    cancelled = true;
   };
+}, [id]);
+
+//   const formatArray = (items, field = null) => {
+//   if (!items || items.length === 0) return "N/A";
+
+//   return items
+//     .map((item) => {
+//       if (typeof item === "string") return item;
+
+//       if (field && item[field]) return item[field];
+
+//       if (item.risk) return item.risk;
+//       if (item.strategy) return item.strategy;
+//       if (item.description) return item.description;
+//       if (item.name) return item.name;
+
+//       return "N/A";
+//     })
+//     .join("\n");
+// };
+
+// const formatSimpleList = (items) => {
+//   if (!items || items.length === 0) {
+//     return "None Specified";
+//   }
+
+//   return items.join("\n");
+// };
+
+// const formatDevelopmentEffort = (effort) => {
+//   if (!effort) return "N/A";
+
+//   return Object.entries(effort)
+//     .map(([key, value]) => `${key}: ${value}`)
+//     .join("\n");
+// };
+
+  // Generate proposal
+  const handleGenerateProposal = async () => {
+  try {
+    setGenerating(true);
+
+    const response = await createProposal({
+      rfpId: rfp._id,
+    });
+
+   setProposal(response.data);
+
+setProposalContent(
+  response.data.proposalContent
+);
+
+    showToast(
+      "Proposal generated successfully!",
+      "success"
+    );
+  } catch (error) {
+    console.error(
+      "Proposal generation failed:",
+      error
+    );
+
+    showToast(
+      error?.response?.data?.message ||
+        "Failed to generate proposal",
+      "error"
+    );
+  } finally {
+    setGenerating(false);
+  }
+};
+
+  // const downloadProposal = () => {
+  //   if (!proposalContent) return;
+  //   const blob = new Blob([proposalContent], { type: "text/plain" });
+  //   const url = URL.createObjectURL(blob);
+  //   const a = document.createElement("a");
+  //   a.href = url;
+  //   a.download = `Proposal_${rfp.projectName.replace(/\s+/g, "_")}.txt`;
+  //   document.body.appendChild(a);
+  //   a.click();
+  //   document.body.removeChild(a);
+  //   URL.revokeObjectURL(url);
+  // };
 
   if (loading) {
     return (
@@ -291,7 +339,7 @@ END OF PROPOSAL
       <CollapsibleSection title="Business Analysis">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <InfoItem label="Project Type" value={rfp.businessAnalysis?.projectType} />
-          <InfoItem label="Complexity" value={rfp.businessAnalysis?.complexity} />
+          <InfoItem label="Complexity" value={rfp.costEstimation?.complexity} />
         </div>
         <SubSectionList title="Major Modules" items={toStringList(rfp.businessAnalysis?.majorModules)} />
         <SubSectionList title="Key Features" items={toStringList(rfp.businessAnalysis?.keyFeatures)} />
@@ -363,7 +411,7 @@ END OF PROPOSAL
           </button>
           {proposalContent && (
             <button
-              onClick={downloadProposal}
+              onClick={handleDownload}
               className="bg-green-600 hover:bg-green-700 text-white font-medium px-5 py-2.5 rounded-lg transition-colors flex items-center gap-2"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

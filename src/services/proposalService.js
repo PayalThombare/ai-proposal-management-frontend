@@ -27,6 +27,26 @@ export const approveProposal = async (id) => {
   return response.data;
 };
 
+export const getProposalByRfpId = async (
+  rfpId
+) => {
+  const response = await api.get(
+    `/proposals/rfp/${rfpId}`
+  );
+
+  return response.data;
+};
+
+export const downloadProposalPdf = async (
+  proposalId
+) => {
+  const response = await api.get(
+    `/proposals/${proposalId}/download`
+  );
+
+  return response.data;
+};
+
 export const rejectProposal = async (id, rejectionReason) => {
   const response = await api.patch(
     `/proposals/${id}/reject`,
