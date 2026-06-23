@@ -58,6 +58,27 @@ const CollapsibleSection = ({ title, children, defaultOpen = true }) => {
 };
 
 // ------------------------------
+// Helper: safely convert array items to string
+// ------------------------------
+const toStringList = (items) => {
+  if (!items) return [];
+  return items.map((item) => {
+    if (typeof item === "string") return item;
+    // Handle common object shapes: description, risk, name, detail
+    if (item.description) return item.description;
+    if (item.risk) return item.risk;
+    if (item.name) return item.name;
+    if (item.detail) return item.detail;
+    // Fallback: try to convert object to readable string (better than crash)
+    try {
+      return JSON.stringify(item);
+    } catch {
+      return "N/A";
+    }
+  });
+};
+
+// ------------------------------
 // Main RFPDetails Component
 // ------------------------------
 const RFPDetails = () => {
@@ -271,24 +292,33 @@ END OF PROPOSAL
           <InfoItem label="Project Type" value={rfp.businessAnalysis?.projectType} />
           <InfoItem label="Complexity" value={rfp.businessAnalysis?.complexity} />
         </div>
-        <SubSectionList title="Major Modules" items={rfp.businessAnalysis?.majorModules} />
-        <SubSectionList title="Key Features" items={rfp.businessAnalysis?.keyFeatures} />
-        <SubSectionList title="Dependencies" items={rfp.businessAnalysis?.dependencies} />
-        <SubSectionList title="Assumptions" items={rfp.businessAnalysis?.assumptions} />
+        <SubSectionList title="Major Modules" items={toStringList(rfp.businessAnalysis?.majorModules)} />
+        <SubSectionList title="Key Features" items={toStringList(rfp.businessAnalysis?.keyFeatures)} />
+        <SubSectionList title="Dependencies" items={toStringList(rfp.businessAnalysis?.dependencies)} />
+        <SubSectionList title="Assumptions" items={toStringList(rfp.businessAnalysis?.assumptions)} />
       </CollapsibleSection>
 
-      {/* Risk Analysis */}
+      {/* Risk Analysis – FIXED */}
       <CollapsibleSection title="Risk Analysis">
         <SubSectionList
           title="Technical Risks"
-          items={rfp.riskAnalysis?.technicalRisks?.map((r) => (typeof r === "string" ? r : r.riskDescription))}
+          items={toStringList(rfp.riskAnalysis?.technicalRisks)}
         />
-        <SubSectionList title="Resource Risks" items={rfp.riskAnalysis?.resourceRisks} />
-        <SubSectionList title="Timeline Risks" items={rfp.riskAnalysis?.timelineRisks} />
-        <SubSectionList title="Security Risks" items={rfp.riskAnalysis?.securityRisks} />
+        <SubSectionList
+          title="Resource Risks"
+          items={toStringList(rfp.riskAnalysis?.resourceRisks)}
+        />
+        <SubSectionList
+          title="Timeline Risks"
+          items={toStringList(rfp.riskAnalysis?.timelineRisks)}
+        />
+        <SubSectionList
+          title="Security Risks"
+          items={toStringList(rfp.riskAnalysis?.securityRisks)}
+        />
         <SubSectionList
           title="Mitigation Strategies"
-          items={rfp.riskAnalysis?.mitigationStrategies?.map((s) => (typeof s === "string" ? s : s.description))}
+          items={toStringList(rfp.riskAnalysis?.mitigationStrategies)}
         />
       </CollapsibleSection>
 
@@ -303,7 +333,7 @@ END OF PROPOSAL
         </div>
         <SubSectionList
           title="Recommendations"
-          items={rfp.costEstimation?.recommendations?.map((r) => (typeof r === "string" ? r : r.detail))}
+          items={toStringList(rfp.costEstimation?.recommendations)}
         />
       </CollapsibleSection>
 
