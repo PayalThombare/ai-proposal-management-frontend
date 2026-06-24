@@ -10,7 +10,6 @@ import {
   FaSignOutAlt,
   FaChevronLeft,
   FaChevronRight,
-  FaPlus,
   FaBell,
 } from "react-icons/fa";
 import useAuth from "../hooks/useAuth";
@@ -234,7 +233,7 @@ const Sidebar = ({ rfpCount = 0, proposalCount = 0 }) => {
         </button>
 
         {/* ── CTA Button ── */}
-        {!collapsed && (
+        {/* {!collapsed && (
           <div className="px-4 pt-4 pb-1">
             <Link
               to="/rfp/upload"
@@ -250,9 +249,9 @@ const Sidebar = ({ rfpCount = 0, proposalCount = 0 }) => {
               New RFP
             </Link>
           </div>
-        )}
+        )} */}
 
-        {collapsed && (
+        {/* {collapsed && (
           <div className="flex justify-center pt-4 pb-1">
             <Link
               to="/rfp/upload"
@@ -266,7 +265,7 @@ const Sidebar = ({ rfpCount = 0, proposalCount = 0 }) => {
               <FaPlus size={12} />
             </Link>
           </div>
-        )}
+        )} */}
 
         {/* ── Navigation ── */}
         <nav
