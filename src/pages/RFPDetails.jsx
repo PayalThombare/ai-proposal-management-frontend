@@ -646,13 +646,14 @@ const canGenerate =
       </CollapsibleSection>
 
       {/* Proposal Card */}
+        {canGenerate && (
       <div className="bg-white rounded-xl shadow-sm border p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="text-lg font-semibold text-gray-800">Proposal Document</h2>
           <p className="text-gray-500 text-sm">Generate a comprehensive proposal from the analysis above.</p>
         </div>
         <div className="flex gap-3 flex-shrink-0">
-          {canGenerate && (
+        
           <button
             onClick={() => setModal({ open: true, type: "generate" })}
             disabled={generating}
@@ -663,7 +664,7 @@ const canGenerate =
             </svg>
             {proposalContent ? "Regenerate" : "Generate Proposal"}
           </button>
-          )}
+      
 
           {proposalContent && (
             <button
@@ -678,6 +679,7 @@ const canGenerate =
           )}
         </div>
       </div>
+        )}
 
       {/* ── Confirm: Generate */}
       <ConfirmModal
