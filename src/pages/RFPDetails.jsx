@@ -6,6 +6,7 @@ import {
   getProposalByRfpId,
   downloadProposalPdf,
 } from "../services/proposalService";
+import useAuth from "../hooks/useAuth";
 
 // ─────────────────────────────────────────────
 // Toast System
@@ -508,6 +509,12 @@ const RFPDetails = () => {
     return () => { cancelled = true; };
   }, [id]);
 
+
+  const { user } = useAuth();
+
+const canGenerate =
+  user?.role === "admin" || user?.role === "business_analyst";
+
   // Confirm → generate
   const handleGenerateProposal = async () => {
     setModal({ open: false });
@@ -645,6 +652,7 @@ const RFPDetails = () => {
           <p className="text-gray-500 text-sm">Generate a comprehensive proposal from the analysis above.</p>
         </div>
         <div className="flex gap-3 flex-shrink-0">
+          {canGenerate && (
           <button
             onClick={() => setModal({ open: true, type: "generate" })}
             disabled={generating}
@@ -655,6 +663,7 @@ const RFPDetails = () => {
             </svg>
             {proposalContent ? "Regenerate" : "Generate Proposal"}
           </button>
+          )}
 
           {proposalContent && (
             <button
